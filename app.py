@@ -12,10 +12,10 @@ import easyocr
 # Translation
 from deep_translator import GoogleTranslator
 
-st.set_page_config(page_title="Image → Multilingual Table (OTA POC)", layout="wide")
+st.set_page_config(page_title="Design Asset Text Translator", layout="wide")
 
-st.title("Shared Translation POC — Image → Multilingual Table")
-st.caption("Upload an image with English text → extract strings → translate to selected languages → export to CSV/XLSX.\n"
+st.title("Design Asset Text Translator")
+st.caption("Upload an image with *English* text → extract strings → translate to selected languages → export to CSV/XLSX.\n"
            "Supports custom glossary overrides per language (optional).")
 
 with st.expander("Language selection (ISO-like headers)", expanded=True):
@@ -86,7 +86,6 @@ def translate_text_list(texts, targets):
 
 def ocr_extract_strings(image_bytes):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    # st.image(image, caption="Uploaded Image", use_container_width=True)
     st.image(image, caption="Uploaded Image")
 
     np_img = np.array(image)
