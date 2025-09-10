@@ -22,7 +22,7 @@ with st.expander("Language selection (ISO-like headers)", expanded=True):
     # Display language codes (headers will be EN, ID, JA, KO, MS, TH, VI, ZH)
     language_options = ["ID","JA","KO","MS","TH","VI","ZH"]
     target_langs = st.multiselect(
-        "Select target languages (you can pick one or more):",
+        "Select target languages:",
         options=language_options,
         default=[]
     )
@@ -49,6 +49,21 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
                 st.success(f"Loaded glossary with {len(glossary_map)} entries.")
         except Exception as e:
             st.error(f"Failed to read glossary: {e}")
+ 
+# --- Add template download (empty if no glossary, or based on uploaded glossary) ---
+    st.markdown("### Download Glossary Template")
+    headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
+    if gdf is not None:
+        df_template = gdf.copy()
+    else:
+        df_template = pd.DataFrame(columns=headers)
+
+    st.download_button(
+        label="⬇️ Download CSV Glossary Template",
+        data=df_template.to_csv(index=False).encode("utf-8"),
+        file_name="glossary_template.csv",
+        mime="text/csv"
+    )
 
 # Helper: map UI codes to translator target codes
 TARGET_CODE_MAP = {
