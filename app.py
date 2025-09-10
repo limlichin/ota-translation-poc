@@ -157,24 +157,6 @@ def translate_text_list(texts, targets):
                 results[code].append(f"[Translation error: {e}]")
     return results
 
-# -- start of old set -- #
-     "   for code in targets:
-     "       # Glossary override first (exact match on EN, case-insensitive)
-     "       if glossary_map:
-     "           gkey = base.strip().lower()
-     "           if gkey in glossary_map and glossary_map[gkey].get(code, ""):
-     "               results[code].append(glossary_map[gkey][code])
-     "               continue
-     "       # Fall back to MT
-     "       try:
-     "           tgt = TARGET_CODE_MAP[code]
-     "           translated = GoogleTranslator(source="en", target=tgt).translate(base)
-     "           results[code].append(translated)
-     "       except Exception as e:
-     "           results[code].append(f"[Translation error: {e}]")
-    "return results
-# -- end of old set -- #
-
 # --- OCR ---
 def ocr_extract_strings(image_bytes):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
