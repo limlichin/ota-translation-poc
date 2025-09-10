@@ -183,7 +183,7 @@ ocr_mode = st.radio(
     help="Choose how OCR should group text: separate phrases (stricter, more rows) or natural sentences (looser, fewer rows)."
 )
 
-def ocr_extract_strings(image_bytes):
+def ocr_extract_strings(image_bytes, mode):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     st.image(image, caption="Uploaded Image")
 
