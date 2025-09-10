@@ -175,6 +175,14 @@ def translate_text_list(texts, targets):
     return results
 
 # --- OCR ---
+st.markdown("### OCR Extraction Settings")
+ocr_mode = st.radio(
+    "How should detected text be grouped?",
+    options=["Keep Phrases Separate", "Keep Natural Sentences"],
+    index=0,
+    help="Choose how OCR should group text: separate phrases (stricter, more rows) or natural sentences (looser, fewer rows)."
+)
+
 def ocr_extract_strings(image_bytes):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     st.image(image, caption="Uploaded Image")
@@ -187,7 +195,7 @@ def ocr_extract_strings(image_bytes):
         texts = reader.readtext(
             np_img,
             detail=0,
-            paragraph=True,  # preserve spacing between words
+            paragraph=(mode == "Keep Natural Sentences"),  # paragraph=True, means preserve spacing between words
             allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?,.%+-'\"() "
         )
         
@@ -213,7 +221,7 @@ uploaded = st.file_uploader("Upload PNG/JPG image containing English text", type
 if uploaded is not None:
     try:
         img_bytes = uploaded.read()
-        strings = ocr_extract_strings(img_bytes)
+        strings = ocr_extract_strings(img_bytes, ocr_mode)
 
         if not strings:
             st.warning("No text detected. Try another image or ensure there is clear English text.")
