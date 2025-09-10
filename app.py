@@ -48,6 +48,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False):
+    st.subheader("Optional: Upload a glossary CSV for overrides")
     st.write("Provide a CSV with columns: EN, ID, JA, KO, MS, TH, VI, ZH. "
              "If a source string matches EN exactly (case-insensitive trim), translations will be overridden.")
     glossary_file = st.file_uploader("Upload glossary CSV (optional)", type=["csv"], key="glossary")
@@ -69,6 +70,23 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
                 st.success(f"Loaded glossary with {len(glossary_map)} entries.")
         except Exception as e:
             st.error(f"Failed to read glossary: {e}")
+
+    # --- Glossary Template Download ---
+    st.markdown("<p style='font-size: 0.9em;'>Download Glossary Template</p>", unsafe_allow_html=True)
+    headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
+
+           if gdf is not None:
+               df_template = gdf.copy()
+           else:
+               # add a few empty rows for convenience
+               df_template = pd.DataFrame(columns=headers).reindex(range(5))
+
+           st.download_button(
+               label="⬇️ Download CSV Glossary Template",
+               data=df_template.to_csv(index=False).encode("utf-8"),
+               file_name="glossary_template.csv",
+               mime="text/csv"
+      )
 
 # --- Normalization and matching helpers ---
 
@@ -117,22 +135,6 @@ def should_translate(text: str) -> bool:
         return False
     return True           
 
-# --- Glossary Template Download ---
-st.markdown("### Download Glossary Template")
-headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
-
-if gdf is not None:
-    df_template = gdf.copy()
-else:
-    # add a few empty rows for convenience
-    df_template = pd.DataFrame(columns=headers).reindex(range(5))
-
-st.download_button(
-    label="⬇️ Download CSV Glossary Template",
-    data=df_template.to_csv(index=False).encode("utf-8"),
-    file_name="glossary_template.csv",
-    mime="text/csv"
-)
 
 # --- Translation ---
 # Helper: map UI codes to translator target codes
@@ -177,9 +179,9 @@ def translate_text_list(texts, targets):
 # --- OCR ---
 st.markdown("### OCR Extraction Settings")
 ocr_mode = st.radio(
-    "How should detected text be grouped?",
+    "Select how detected text should be grouped:",
     options=["Keep Phrases Separate", "Keep Natural Sentences"],
-    index=0,
+    index=0, # default = "Keep Phrases Separate"
     help="Choose how OCR should group text: separate phrases (stricter, more rows) or natural sentences (looser, fewer rows)."
 )
 
@@ -265,7 +267,7 @@ if uploaded is not None:
                     df.to_excel(writer, index=False, sheet_name="translations")
                 st.success(f"Saved to storage/translations_{ts}.xlsx and .csv")
 
-            st.caption("Tip: Use the glossary CSV to enforce preferred wording for OTA context (e.g., “Apply” (coupon) → context-appropriate equivalents).")
+            st.caption("Tip: Use the glossary CSV to enforce preferred, context-appropriate words.")
     except Exception as e:
         st.error(f"Something went wrong: {e}")
 else:
