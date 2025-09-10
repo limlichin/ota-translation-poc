@@ -102,20 +102,22 @@ def should_translate(text: str) -> bool:
         return False
     return True           
 
-# --- Add template download (empty if no glossary, or based on uploaded glossary) ---
-    st.markdown("### Download Glossary Template")
-    headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
-    if gdf is not None:
-        df_template = gdf.copy()
-    else:
-        df_template = pd.DataFrame(columns=headers)
+# --- Glossary Template Download ---
+st.markdown("### Download Glossary Template")
+headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
 
-    st.download_button(
-        label="⬇️ Download CSV Glossary Template",
-        data=df_template.to_csv(index=False).encode("utf-8"),
-        file_name="glossary_template.csv",
-        mime="text/csv"
-    )
+if gdf is not None:
+    df_template = gdf.copy()
+else:
+    # add a few empty rows for convenience
+    df_template = pd.DataFrame(columns=headers).reindex(range(5))
+
+st.download_button(
+    label="⬇️ Download CSV Glossary Template",
+    data=df_template.to_csv(index=False).encode("utf-8"),
+    file_name="glossary_template.csv",
+    mime="text/csv"
+)
 
 # --- Translation ---
 # Helper: map UI codes to translator target codes
@@ -170,15 +172,20 @@ def ocr_extract_strings(image_bytes):
         texts = reader.readtext(
             np_img,
             detail=0,
-            paragraph=False,
-            allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?,.%+-'\"()"
+            paragraph=True,  # preserve spacing between words
+            allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?,.%+-'\"() "
         )
         
     # Clean up: strip, remove empties, deduplicate preserving order
     cleaned = []
     seen = set()
     for t in texts:
-        s = apply_corrections(str(t).strip())
+        s = str(t).strip()
+
+        # Pattern-based correction (avoid flipping legit chars)
+        s = re.sub(r"([A-Za-z])!([A-Za-z])", r"\1l\2", s)  # fix "! → l" inside words
+        s = s.replace("! ", "l ")  # more conservative correction
+               
         if s and s not in seen:
             cleaned.append(s)
             seen.add(s)
