@@ -71,8 +71,7 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
         except Exception as e:
             st.error(f"Failed to read glossary: {e}")
 
-    # --- Glossary Template Download ---
-    st.markdown("<p style='font-size: 0.9em;'>Download Glossary Template</p>", unsafe_allow_html=True)
+    # --- Glossary Template Download Button---
     headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
 
     if gdf is not None:
