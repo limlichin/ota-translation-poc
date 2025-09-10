@@ -75,18 +75,18 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
     st.markdown("<p style='font-size: 0.9em;'>Download Glossary Template</p>", unsafe_allow_html=True)
     headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
 
-           if gdf is not None:
-               df_template = gdf.copy()
-           else:
-               # add a few empty rows for convenience
-               df_template = pd.DataFrame(columns=headers).reindex(range(5))
+    if gdf is not None:
+        df_template = gdf.copy()
+    else:
+        # add a few empty rows for convenience
+        df_template = pd.DataFrame(columns=headers).reindex(range(5))
 
-           st.download_button(
-               label="⬇️ Download CSV Glossary Template",
-               data=df_template.to_csv(index=False).encode("utf-8"),
-               file_name="glossary_template.csv",
-               mime="text/csv"
-      )
+    st.download_button(
+        label="⬇️ Download CSV Glossary Template",
+        data=df_template.to_csv(index=False).encode("utf-8"),
+        file_name="glossary_template.csv",
+        mime="text/csv"
+     )
 
 # --- Normalization and matching helpers ---
 
