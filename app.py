@@ -47,13 +47,18 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- Glossary upload section ---
 with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False):
     st.subheader("Optional: Upload a glossary CSV for overrides")
     st.write("Provide a CSV with columns: EN, ID, JA, KO, MS, TH, VI, ZH. "
              "If a source string matches EN exactly (case-insensitive trim), translations will be overridden.")
+
+    # Load from session_state if available
+    glossary_map = st.session_state.get("glossary_map", {})
+    gdf = st.session_state.get("gdf", None)
+
     glossary_file = st.file_uploader("Upload glossary CSV (optional)", type=["csv"], key="glossary")
-    glossary_map = {}
-    gdf = None
+
     if glossary_file is not None:
         try:
             gdf = pd.read_csv(glossary_file).fillna("")
@@ -68,8 +73,31 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
                     if key:
                         glossary_map[key] = {col: str(row[col]) for col in expected_cols}
                 st.success(f"Loaded glossary with {len(glossary_map)} entries.")
+
+                # Save to session_state for persistence
+                st.session_state["glossary_map"] = glossary_map
+                st.session_state["gdf"] = gdf
+
+                # Save to disk for cross-session persistence
+                os.makedirs("storage", exist_ok=True)
+                gdf.to_csv("storage/glossary.csv", index=False)
+
         except Exception as e:
             st.error(f"Failed to read glossary: {e}")
+
+    # Try loading glossary from disk if nothing in session_state
+    if not glossary_map and os.path.exists("storage/glossary.csv"):
+        try:
+            gdf = pd.read_csv("storage/glossary.csv").fillna("")
+            glossary_map = {
+                str(row["EN"]).strip().lower(): {col: str(row[col]) for col in gdf.columns}
+                for _, row in gdf.iterrows()
+            }
+            st.session_state["glossary_map"] = glossary_map
+            st.session_state["gdf"] = gdf
+            st.info(f"Loaded glossary from previous session with {len(glossary_map)} entries.")
+        except Exception as e:
+            st.error(f"Failed to reload glossary: {e}")
 
     # --- Glossary Template Download Button---
     headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
