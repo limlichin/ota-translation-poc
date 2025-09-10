@@ -5,12 +5,16 @@ from PIL import Image
 import io
 import os
 import time
+import re
 
 # OCR
 import easyocr
 
 # Translation
 from deep_translator import GoogleTranslator
+
+# Fuzzy match
+from rapidfuzz import process
 
 st.set_page_config(page_title="Design Asset Text Translator", layout="wide")
 
@@ -50,7 +54,54 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
                 st.success(f"Loaded glossary with {len(glossary_map)} entries.")
         except Exception as e:
             st.error(f"Failed to read glossary: {e}")
- 
+
+# --- Normalization and matching helpers ---
+
+def normalize_text(text: str) -> str:
+    """Lowercase, remove punctuation, collapse spaces."""
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", "", text)  # drop punctuation
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+def lookup_glossary(english_text: str, glossary: dict, threshold=90):
+    """Try normalized exact match, then fuzzy match."""
+    if not glossary:
+        return None
+
+    # Build normalized glossary index
+    norm_map = {normalize_text(k): v for k, v in glossary.items()}
+
+    nkey = normalize_text(english_text)
+    if nkey in norm_map:
+        return norm_map[nkey]
+
+    # Fallback fuzzy search
+    choices = list(norm_map.keys())
+    match, score, _ = process.extractOne(nkey, choices)
+    if score >= threshold:
+        return norm_map[match]
+
+    return None
+
+# Correction map for common OCR confusions
+CORRECTION_MAP = {
+    "l": "!",  # lowercase L misread for exclamation
+}
+
+def apply_corrections(text: str) -> str:
+    return "".join(CORRECTION_MAP.get(ch, ch) for ch in text)
+
+def should_translate(text: str) -> bool:
+    """Filter out non-English noise (numbers, symbols, emojis)."""
+    # Skip if very short
+    if len(text.strip()) <= 1:
+        return False
+    # Skip if purely numeric/symbols
+    if re.fullmatch(r"[0-9\W_]+", text):
+        return False
+    return True           
+
 # --- Add template download (empty if no glossary, or based on uploaded glossary) ---
     st.markdown("### Download Glossary Template")
     headers = ["EN","ID","JA","KO","MS","TH","VI","ZH"]
@@ -66,6 +117,7 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
         mime="text/csv"
     )
 
+# --- Translation ---
 # Helper: map UI codes to translator target codes
 TARGET_CODE_MAP = {
     "ID": "id",
@@ -84,14 +136,19 @@ def translate_text_list(texts, targets):
     results = {code: [] for code in targets}
     for t in texts:
         base = str(t)
+               
+        if not should_translate(base):
+            for code in targets:
+                results[code].append(base)  # keep as-is
+            continue
+
+        # Glossary lookup
+        gmatch = lookup_glossary(base, glossary_map)
         for code in targets:
-            # Glossary override first (exact match on EN, case-insensitive)
-            if glossary_map:
-                gkey = base.strip().lower()
-                if gkey in glossary_map and glossary_map[gkey].get(code, ""):
-                    results[code].append(glossary_map[gkey][code])
-                    continue
-            # Fall back to MT
+            if gmatch and gmatch.get(code, ""):
+                results[code].append(gmatch[code])
+                continue
+
             try:
                 tgt = TARGET_CODE_MAP[code]
                 translated = GoogleTranslator(source="en", target=tgt).translate(base)
@@ -100,6 +157,25 @@ def translate_text_list(texts, targets):
                 results[code].append(f"[Translation error: {e}]")
     return results
 
+# -- start of old set -- #
+     "   for code in targets:
+     "       # Glossary override first (exact match on EN, case-insensitive)
+     "       if glossary_map:
+     "           gkey = base.strip().lower()
+     "           if gkey in glossary_map and glossary_map[gkey].get(code, ""):
+     "               results[code].append(glossary_map[gkey][code])
+     "               continue
+     "       # Fall back to MT
+     "       try:
+     "           tgt = TARGET_CODE_MAP[code]
+     "           translated = GoogleTranslator(source="en", target=tgt).translate(base)
+     "           results[code].append(translated)
+     "       except Exception as e:
+     "           results[code].append(f"[Translation error: {e}]")
+    "return results
+# -- end of old set -- #
+
+# --- OCR ---
 def ocr_extract_strings(image_bytes):
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     st.image(image, caption="Uploaded Image")
@@ -109,17 +185,24 @@ def ocr_extract_strings(image_bytes):
     with st.spinner("Running OCR (English)..."):
         reader = easyocr.Reader(['en'], gpu=False)
         # detail=0 returns only text lines
-        texts = reader.readtext(np_img, detail=0, paragraph=False)
+        texts = reader.readtext(
+            np_img,
+            detail=0,
+            paragraph=False,
+            allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?,.%+-'\"()"
+        )
+        
     # Clean up: strip, remove empties, deduplicate preserving order
     cleaned = []
     seen = set()
     for t in texts:
-        s = str(t).strip()
+        s = apply_corrections(str(t).strip())
         if s and s not in seen:
             cleaned.append(s)
             seen.add(s)
     return cleaned
 
+# --- Main UI ---
 st.subheader("1) Upload an image")
 uploaded = st.file_uploader("Upload PNG/JPG image containing English text", type=["png","jpg","jpeg"])
 
@@ -147,7 +230,7 @@ if uploaded is not None:
             st.subheader("3) Review & Export")
             st.dataframe(df, use_container_width=True, hide_index=True)
 
-            # Prepare downloads
+            # Csv export
             csv_bytes = df.to_csv(index=False).encode("utf-8-sig")
             st.download_button("⬇️ Download as CSV", data=csv_bytes, file_name="translations.csv", mime="text/csv")
 
