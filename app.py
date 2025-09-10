@@ -30,6 +30,21 @@ with st.expander("Language selection (ISO-like headers)", expanded=True):
         options=language_options,
         default=[]
     )
+# --- Custom UI Styling ---
+st.markdown("""
+<style>
+/* Multiselect selected options (chips) */
+.stMultiSelect [data-baseweb="tag"] {
+    background-color: #0047AB !important;
+    color: white !important;
+}
+/* Multiselect field border */
+.stMultiSelect > div {
+    border: 1px solid #0047AB !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
     st.caption("We always keep the English (EN) column. Headers shown in the table are EN + your selections.")
 
 with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False):
