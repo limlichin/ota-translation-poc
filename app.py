@@ -33,6 +33,7 @@ with st.expander("Optional: Upload a glossary CSV for overrides", expanded=False
              "If a source string matches EN exactly (case-insensitive trim), translations will be overridden.")
     glossary_file = st.file_uploader("Upload glossary CSV (optional)", type=["csv"], key="glossary")
     glossary_map = {}
+    gdf = None
     if glossary_file is not None:
         try:
             gdf = pd.read_csv(glossary_file).fillna("")
