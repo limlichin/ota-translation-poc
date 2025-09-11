@@ -284,16 +284,6 @@ if uploaded is not None:
                                file_name="translations.xlsx",
                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-            # Optional: Save a copy on server (for simple persistence)
-            save = st.checkbox("Also save a copy on server (./storage)")
-            if save:
-                os.makedirs("storage", exist_ok=True)
-                ts = time.strftime("%Y%m%d-%H%M%S")
-                df.to_csv(f"storage/translations_{ts}.csv", index=False)
-                with pd.ExcelWriter(f"storage/translations_{ts}.xlsx", engine="xlsxwriter") as writer:
-                    df.to_excel(writer, index=False, sheet_name="translations")
-                st.success(f"Saved to storage/translations_{ts}.xlsx and .csv")
-
             st.caption("Tip: Use the glossary CSV to enforce preferred, context-appropriate words.")
     except Exception as e:
         st.error(f"Something went wrong: {e}")
